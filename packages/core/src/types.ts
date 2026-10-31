@@ -69,6 +69,8 @@ export interface ApprovalItem {
   decidedAt?: string;
   decidedBy?: string;
   decisionNote?: string;
+  /** Held content for a reviewer, already redacted. Never raw patient identifiers. */
+  payload?: string;
 }
 
 export interface AuditEvent {

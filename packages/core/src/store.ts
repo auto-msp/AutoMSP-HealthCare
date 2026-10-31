@@ -26,6 +26,7 @@ export interface EnqueueInput {
   patientRef: string;
   payer?: string;
   amountUsd?: number;
+  payload?: string;
 }
 
 export interface PortalStats {
@@ -193,6 +194,14 @@ export class TenantScope {
       module: item.module, subject: item.id, detail: item.title,
     });
     return item;
+  }
+
+  /**
+   * For platform services such as the agent gateway to leave a trace in the audit chain.
+   * Callers must pass summaries only, never raw prompts, outputs or patient identifiers.
+   */
+  recordEvent(action: string, extra: { module?: ModuleId; subject?: string; detail?: string } = {}): AuditEvent {
+    return this.s.record(this.tenant.id, this.actor, action, extra);
   }
 
   auditLog(): AuditEvent[] {

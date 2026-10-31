@@ -10,6 +10,7 @@ One multi-tenant portal for US healthcare practices. It brings the useful ideas 
 | --- | --- |
 | `apps/portal` | Next.js 16 / React 19 / Tailwind 4 portal: demo sign-in, dashboard, approval queue, modules, audit log |
 | `packages/core` | Domain rules: tenants, roles, module catalogue, approval queue, hash-chained audit log, with tests |
+| `packages/gateway` | The guardrails gateway: every AI call passes through it (redaction, injection screen, output screen, audit) |
 | `packages/db` | Prisma 7 schema, migrations and Postgres row-level security, with an isolation test |
 
 ## Run it
@@ -37,10 +38,18 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - **The audit log is chained.** Each event stores the hash of the one before it. The portal shows whether the chain verifies, and the database refuses updates, deletes and out-of-order inserts.
 - **Roles:** owner, admin, billing, clinician, auditor, with the grants in `packages/core/src/permissions.ts`.
 
+## The guardrails gateway
+
+`packages/gateway` is the one door for model calls. For each call it checks the module is on for the practice, scores the text for prompt injection (blocking before the model is called), replaces identifiers with tokens, calls the model, then screens the answer for a leaked hidden marker, raw identifiers, mentions of other patients and echoed attacks. A risky answer is never returned: it goes to the approval queue, already redacted, for a person to decide. Every call leaves a summary (no raw text) in the practice's audit chain.
+
+Redaction is pattern-based, so names and free-text identifiers are only caught when the caller lists them. It does not check that a summary is faithful to the source. It is a safety net with a human behind it, not a guarantee.
+
+The portal's Guardrails page has a playground. Without a key it uses an offline scripted model. With `AI_GATEWAY_API_KEY` set it calls a free, zero-data-retention US model on Vercel AI Gateway (`GATEWAY_MODEL` overrides the model). A live test in `packages/gateway` runs only when the key is set.
+
 ## Not built yet
 
-1. Agent gateway (guardrails): screens prompts and outputs, redacts identifiers, logs every call. Uses the free, zero-data-retention US models on Vercel AI Gateway.
-2. Prior authorization and denial appeals agents behind the gateway.
-3. Postgres-backed store for the portal (the schema and `withTenant` are ready).
-4. Single sign-on with multi-factor authentication.
+1. Prior authorization and denial appeals agents behind the gateway.
+2. Postgres-backed store for the portal (the schema and `withTenant` are ready).
+3. Single sign-on with multi-factor authentication.
+4. Release of held output after approval (today a reviewer can see the held, redacted text and record a decision).
 5. Before any real patient data: a signed BAA with every host, database and model provider, and a security review.

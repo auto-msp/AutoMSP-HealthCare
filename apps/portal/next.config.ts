@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
-  transpilePackages: ["@automsp/core"],
+  transpilePackages: ["@automsp/core", "@automsp/gateway"],
   poweredByHeader: false,
 };
 

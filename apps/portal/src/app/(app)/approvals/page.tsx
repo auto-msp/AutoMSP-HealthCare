@@ -40,6 +40,12 @@ export default async function Approvals({ searchParams }: { searchParams: Promis
             <h3 className="mt-2 font-medium">{a.title}</h3>
             <p className="mt-1 text-sm text-quiet">{a.detail}</p>
             <p className="mt-1 text-xs text-quiet">{a.patientRef}{a.payer ? ` · ${a.payer}` : ""}</p>
+            {a.payload ? (
+              <details className="mt-3 rounded-lg border border-line bg-paper p-3 text-sm">
+                <summary className="cursor-pointer font-medium">Held output (identifiers already removed)</summary>
+                <p className="mt-2 whitespace-pre-wrap">{a.payload}</p>
+              </details>
+            ) : null}
             {canDecide ? (
               <form action={decideApproval} className="mt-4 flex flex-wrap items-center gap-2">
                 <input type="hidden" name="id" value={a.id} />

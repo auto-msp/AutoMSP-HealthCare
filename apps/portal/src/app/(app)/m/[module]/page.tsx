@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { getModule, isModuleId } from "@automsp/core";
 import { requireScope } from "@/lib/session";
 import { Badge, Card, PageHeader } from "@/components/ui";
+import { GuardrailPlayground } from "@/components/GuardrailPlayground";
+import { activeModel } from "@/lib/model";
 
 export async function generateMetadata({ params }: { params: Promise<{ module: string }> }): Promise<Metadata> {
   const { module } = await params;
@@ -51,6 +53,14 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
           </p>
         </Card>
       )}
+      {def.id === "guardrails" && enabled ? (
+        <GuardrailPlayground
+          patients={[...new Set(scope.approvals().map((a) => a.patientRef))]}
+          modules={scope.modules().filter((m) => m.enabled && m.def.id !== "guardrails" && m.def.status === "demo").map((m) => ({ id: m.def.id, name: m.def.name }))}
+          live={Boolean(process.env.AI_GATEWAY_API_KEY)}
+          modelLabel={activeModel().id}
+        />
+      ) : null}
       <p className="mt-6 text-xs text-quiet">Ported from: {def.sourceApps.join(", ")}.</p>
     </>
   );
