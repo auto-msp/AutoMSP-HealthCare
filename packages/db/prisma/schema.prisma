@@ -1,0 +1,116 @@
+// Every table except Tenant carries tenantId, and the second migration turns on
+// row-level security keyed on it. The app never filters by tenant itself; the
+// database refuses to return or change another tenant's rows.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  owner
+  admin
+  billing
+  clinician
+  auditor
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ApprovalKind {
+  prior_auth_submit
+  appeal_send
+  guardrail_release
+}
+
+model Tenant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  specialty String
+  plan      String   @default("core")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users     User[]
+  modules   TenantModule[]
+  approvals ApprovalItem[]
+  audit     AuditEvent[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  email     String
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model TenantModule {
+  tenantId  String   @map("tenant_id") @db.Uuid
+  moduleId  String   @map("module_id")
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@id([tenantId, moduleId])
+  @@map("tenant_modules")
+}
+
+model ApprovalItem {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String         @map("tenant_id") @db.Uuid
+  module       String
+  kind         ApprovalKind
+  title        String
+  detail       String
+  patientRef   String         @map("patient_ref")
+  payer        String?
+  amountUsd    Decimal?       @map("amount_usd") @db.Decimal(12, 2)
+  status       ApprovalStatus @default(pending)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  decidedAt    DateTime?      @map("decided_at")
+  decidedBy    String?        @map("decided_by") @db.Uuid
+  decisionNote String?        @map("decision_note")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("approval_items")
+}
+
+model AuditEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  seq       Int
+  at        DateTime @default(now())
+  actorId   String   @map("actor_id")
+  actorName String   @map("actor_name")
+  action    String
+  module    String?
+  subject   String?
+  detail    String?
+  prevHash  String   @map("prev_hash")
+  hash      String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, seq])
+  @@map("audit_events")
+}

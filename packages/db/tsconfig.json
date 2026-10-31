@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "types": ["node"], "noEmit": true, "verbatimModuleSyntax": false },
+  "include": ["src", "prisma.config.ts"]
+}
